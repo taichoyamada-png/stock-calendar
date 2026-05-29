@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="株カレンダー">
+<title>株式試算カレンダー</title>
+<style>
+:root{--bg:#f4f6f8;--bg2:#ffffff;--bg3:#f0f2f5;--bd:#dde1e7;--t:#1a1f27;--t2:#6b7280;--t3:#adb5bd;--buy:#16a34a;--buybg:#dcfce7;--sell:#dc2626;--sellbg:#fee2e2;--acc:#2563eb;--gold:#d97706;--r:10px}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;font-family:-apple-system,'Hiragino Sans','Yu Gothic UI',sans-serif;background:var(--bg);color:var(--t)}
+body{display:flex;flex-direction:column;max-width:480px;margin:0 auto;height:100vh}
+.hdr{background:var(--bg2);border-bottom:1px solid var(--bd);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.htitle{font-size:15px;font-weight:700}.hsub{font-size:10px;color:var(--t2);margin-top:1px}
+.hnav{display:flex;gap:6px}
+.nbtn{background:var(--bg3);border:1px solid var(--bd);border-radius:7px;color:var(--t);font-size:16px;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--bd);flex-shrink:0}
+.tab{flex:1;padding:9px 0;font-size:12px;font-weight:600;text-align:center;color:var(--t2);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc)}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:70px}
+.sum-section{padding:10px 10px 0}
+.month-block{background:var(--bg2);border:1px solid var(--bd);border-radius:var(--r);overflow:hidden;margin-bottom:8px}
+.block-head{padding:8px 12px;background:var(--bg3);border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between}
+.block-label{font-size:10px;font-weight:700;color:var(--t2)}
+.block-net{font-size:14px;font-weight:800}
+.month-row{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--bd)}
+.mcard{background:var(--bg2);padding:9px 12px}
+.mc-label{font-size:9px;color:var(--t2);margin-bottom:3px}
+.mc-val{font-size:16px;font-weight:800}
+.total-bar{background:var(--bg2);border:1px solid var(--acc);border-radius:var(--r);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.total-bar-label{font-size:10px;font-weight:700;color:var(--acc)}
+.total-bar-val{font-size:18px;font-weight:800}
+.total-bar-sub{font-size:9px;color:var(--t3);margin-top:2px;text-align:right}
+.pos{color:#16a34a}.neg{color:#dc2626}.neu{color:var(--t)}.zero{color:var(--t3)}
+.calwrap{padding:8px 10px 4px;overflow:hidden}
+.dow-row{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:2px}
+.dow{text-align:center;font-size:10px;font-weight:700;color:var(--t3);padding:2px 0}
+.dow:first-child{color:var(--sell)}.dow:last-child{color:var(--acc)}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;transition:transform .25s ease,opacity .25s ease}
+.cell{background:var(--bg2);border:1px solid var(--bd);border-radius:7px;padding:4px 3px;min-height:64px;cursor:pointer;overflow:hidden;transition:border-color .12s}
+.cell:active{transform:scale(.96)}
+.cell.empty{background:transparent;border-color:transparent;cursor:default}.cell.empty:active{transform:none}
+.cell.today{border-color:var(--acc)}.cell.selected{border-color:var(--gold);background:#fef9c3}
+.cell.sun .cn{color:var(--sell)}.cell.sat .cn{color:var(--acc)}
+.cn{font-size:11px;font-weight:700;color:var(--t2);margin-bottom:3px;display:flex;justify-content:space-between;align-items:center}
+.tdot{width:4px;height:4px;border-radius:50%;background:var(--acc);display:none}
+.cell.today .tdot{display:block}
+.chdl{font-size:7px;font-weight:700;color:var(--sell);margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbuy{font-size:9px;font-weight:700;border-radius:3px;padding:1px 3px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cbuy.p{color:#16a34a;background:#dcfce7}.cbuy.n{color:#dc2626;background:#fee2e2}
+.csell{font-size:9px;font-weight:700;border-radius:3px;padding:1px 3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.csell.p{color:#16a34a;background:#dcfce7}.csell.n{color:#dc2626;background:#fee2e2}
+.cnet{font-size:8px;font-weight:800;text-align:right;margin-top:2px}
+.cnet.p{color:#16a34a}.cnet.n{color:#dc2626}.cnet.z{color:var(--t3)}
+.dpanel{margin:0 10px 10px;background:var(--bg2);border:1px solid var(--gold);border-radius:var(--r);display:none;overflow:hidden}
+.dpanel.show{display:block}
+.dhdr{background:#fefce8;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--bd)}
+.ddate{font-size:14px;font-weight:700;color:var(--gold)}
+.xbtn{background:var(--bg3);border:1px solid var(--bd);border-radius:5px;color:var(--t2);font-size:14px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.dbody{padding:14px}
+.drow{display:flex;align-items:flex-start;gap:8px;margin-bottom:11px}
+.drow label{font-size:12px;color:var(--t2);width:74px;flex-shrink:0;padding-top:10px}
+.dinwrap{flex:1}
+.drow input{width:100%;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;color:var(--t);font-size:15px;font-weight:700;padding:8px 10px;text-align:right;-webkit-appearance:none}
+.drow input:focus{outline:none;border-color:var(--acc)}
+.drow textarea{width:100%;background:var(--bg3);border:1px solid var(--bd);border-radius:7px;color:var(--t);font-size:13px;padding:8px 10px;resize:none;height:50px;font-family:inherit}
+.drow textarea:focus{outline:none;border-color:var(--acc)}
+.calc-hint{font-size:10px;color:var(--t3);margin-top:3px;text-align:right}
+.calc-result{font-size:11px;color:var(--acc);font-weight:700;margin-top:3px;text-align:right;min-height:16px}
+.dnet{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--bg3);border-top:1px solid var(--bd)}
+.dnetl{font-size:12px;color:var(--t2)}.dnetv{font-size:17px;font-weight:800}
+.autosave-indicator{font-size:10px;color:var(--t3);text-align:center;padding:6px;border-top:1px solid var(--bd)}
+.autosave-indicator.saved{color:var(--buy)}
+.listwrap{padding:10px}
+.lmhead{font-size:12px;font-weight:700;color:var(--t2);padding:6px 2px;border-bottom:1px solid var(--bd);margin-bottom:5px}
+.litem{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:10px 12px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer}
+.lbadge{background:var(--bg3);border-radius:7px;padding:5px 8px;text-align:center;min-width:40px}
+.ldnum{font-size:17px;font-weight:800;line-height:1}.ldow{font-size:9px;color:var(--t2);margin-top:1px}
+.ldata{flex:1;min-width:0}
+.lchips{display:flex;gap:5px;margin-bottom:3px;flex-wrap:wrap}
+.chip{font-size:10px;font-weight:700;border-radius:4px;padding:2px 6px}
+.chip-p{color:#16a34a;background:#dcfce7}.chip-n{color:#dc2626;background:#fee2e2}
+.lmemo{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lnet{font-size:13px;font-weight:800;text-align:right;min-width:52px}
+.statswrap{padding:10px}
+.stitle{font-size:10px;font-weight:700;color:var(--t3);letter-spacing:.5px;margin:14px 0 6px}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:6px}
+.scard{background:var(--bg2);border:1px solid var(--bd);border-radius:9px;padding:11px 12px}
+.scard.wide{grid-column:span 2}
+.slabel{font-size:10px;color:var(--t2);margin-bottom:4px}
+.sval{font-size:18px;font-weight:800}
+.ssub{font-size:10px;color:var(--t2);margin-top:2px}
+.tlist{list-style:none}
+.titem{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--bd);font-size:12px}
+.titem:last-child{border-bottom:none}
+.tdate{color:var(--t2)}.tval{font-weight:700}
+.fab{position:fixed;bottom:18px;right:18px;width:50px;height:50px;background:var(--acc);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;color:#fff;cursor:pointer;border:none;box-shadow:0 4px 14px rgba(37,99,235,.4);z-index:100}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;align-items:flex-end}
+.overlay.show{display:flex}
+.sheet{background:var(--bg2);border-radius:16px 16px 0 0;border-top:1px solid var(--bd);padding:8px 0 20px;width:100%}
+.handle{width:34px;height:3px;background:var(--bd);border-radius:2px;margin:0 auto 14px}
+.mtitle{font-size:15px;font-weight:700;padding:0 18px 12px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;align-items:center}
+.mbody{padding:16px 18px}
+.mrow{margin-bottom:14px}
+.mrow label{font-size:12px;color:var(--t2);display:block;margin-bottom:5px}
+.mrow input,.mrow textarea{width:100%;background:var(--bg3);border:1px solid var(--bd);border-radius:9px;color:var(--t);font-size:15px;font-weight:600;padding:9px 12px;-webkit-appearance:none;font-family:inherit}
+.mrow input:focus,.mrow textarea:focus{outline:none;border-color:var(--acc)}
+.mrow textarea{resize:none;height:60px;font-size:13px;font-weight:400}
+.mactions{display:flex;gap:8px;padding:0 18px}
+.mcancelbtn{flex:1;background:var(--bg3);border:1px solid var(--bd);border-radius:9px;color:var(--t2);font-size:14px;font-weight:600;padding:12px;cursor:pointer}
+.maddbtn{flex:2;background:var(--acc);border:none;border-radius:9px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer}
+.empty{text-align:center;padding:36px 16px;color:var(--t3);font-size:12px;line-height:1.8}
+.empty-icon{font-size:36px;margin-bottom:10px}
+#toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#3fb950;color:#fff;font-size:12px;font-weight:700;padding:7px 16px;border-radius:18px;z-index:999;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="hdr">
+  <div><div class="htitle" id="hdrTitle">2026年5月</div><div class="hsub">信用取引 評価額カレンダー</div></div>
+  <div class="hnav">
+    <button class="nbtn" id="prevBtn">‹</button>
+    <button class="nbtn" id="todayBtn">◉</button>
+    <button class="nbtn" id="nextBtn">›</button>
+  </div>
+</div>
+<div class="tabs">
+  <div class="tab active" data-tab="cal">📅 カレンダー</div>
+  <div class="tab" data-tab="list">📋 一覧</div>
+  <div class="tab" data-tab="stats">📊 集計</div>
+</div>
+<div class="scroll">
+  <div id="calView">
+    <div class="sum-section" id="sumSection"></div>
+    <div class="calwrap" id="calwrap">
+      <div class="dow-row">
+        <div class="dow">日</div><div class="dow">月</div><div class="dow">火</div>
+        <div class="dow">水</div><div class="dow">木</div><div class="dow">金</div><div class="dow">土</div>
+      </div>
+      <div class="calgrid" id="calgrid"></div>
+    </div>
+    <div class="dpanel" id="dpanel">
+      <div class="dhdr"><span class="ddate" id="ddate"></span><button class="xbtn" id="dclose">✕</button></div>
+      <div class="dbody">
+        <div class="drow">
+          <label>📈 信用買い</label>
+          <div class="dinwrap">
+            <input type="text" inputmode="decimal" id="dinBuy" placeholder="例: 79035">
+            <div class="calc-hint">計算式OK: 10000+5000 → 15000</div>
+            <div class="calc-result" id="buyCalcResult"></div>
+          </div>
+        </div>
+        <div class="drow">
+          <label>📉 信用売り</label>
+          <div class="dinwrap">
+            <input type="text" inputmode="decimal" id="dinSell" placeholder="例: -29100">
+            <div class="calc-hint">計算式OK: -20000+3000 → -17000</div>
+            <div class="calc-result" id="sellCalcResult"></div>
+          </div>
+        </div>
+        <div class="drow"><label>📝 メモ</label><textarea id="dinMemo" placeholder="銘柄・メモ（任意）"></textarea></div>
+      </div>
+      <div class="dnet"><span class="dnetl">この日の損益（買＋売）</span><span class="dnetv neu" id="dnetval">+¥0</span></div>
+      <div class="autosave-indicator" id="autoSaveIndicator">入力後に自動保存されます</div>
+    </div>
+  </div>
+  <div id="listView" style="display:none"><div class="listwrap" id="listwrap"></div></div>
+  <div id="statsView" style="display:none"><div class="statswrap" id="statswrap"></div></div>
+</div>
+<button class="fab" id="fab">＋</button>
+<div class="overlay" id="overlay">
+  <div class="sheet">
+    <div class="handle"></div>
+    <div class="mtitle"><span>📥 データ入力</span><button class="xbtn" id="mclose">✕</button></div>
+    <div class="mbody">
+      <div class="mrow"><label>📅 日付</label><input type="date" id="mdate"></div>
+      <div class="mrow"><label>📈 信用買い 損益（円）</label><input type="text" inputmode="decimal" id="mbuy" placeholder="例: 79035"></div>
+      <div class="mrow"><label>📉 信用売り 損益（円）</label><input type="text" inputmode="decimal" id="msell" placeholder="例: -29100"></div>
+      <div class="mrow"><label>📝 メモ（任意）</label><textarea id="mmemo" placeholder="銘柄名やコメントなど"></textarea></div>
+    </div>
+    <div class="mactions">
+      <button class="mcancelbtn" id="mcancel">キャンセル</button>
+      <button class="maddbtn" id="msave">💾 保存する</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+const KEY='stk_v4';
+const DAYS=['日','月','火','水','木','金','土'];
+const MONTHS=['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const today=new Date();
+let cy=today.getFullYear(),cm=today.getMonth(),selKey=null;
+let autoSaveTimer=null;
+
+function migrateOldData(){
+  try{
+    const old=JSON.parse(localStorage.getItem('stk_v1')||'{}');
+    const cur=JSON.parse(localStorage.getItem(KEY)||'{}');
+    let migrated=0;
+    Object.entries(old).forEach(([k,v])=>{if(!cur[k]){cur[k]={buy:v.buy||0,sell:v.sell||0,memo:v.memo||''};migrated++;}});
+    if(migrated>0){localStorage.setItem(KEY,JSON.stringify(cur));setTimeout(()=>toast('旧データ '+migrated+'件を引き継ぎました ✓'),500);}
+  }catch(e){}
+}
+migrateOldData();
+
+function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch{return{}}}
+function save(d){localStorage.setItem(KEY,JSON.stringify(d))}
+let D=load();
+
+function calc(s){
+  if(!s&&s!==0)return null;
+  s=s.toString().trim();
+  if(!s)return null;
+  if(!/^-?[\d.]+([+\-][\d.]+)*$/.test(s))return null;
+  try{const r=Function('"use strict";return('+s+')')();if(isNaN(r)||!isFinite(r))return null;return Math.round(r);}catch(e){return null;}
+}
+
+function dk(y,m,d){return`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
+function getE(k){return D[k]||{buy:0,sell:0,memo:''}}
+function setE(k,buyStr,sellStr,memo){
+  const buy=calc(buyStr),sell=calc(sellStr);
+  if(!buy&&!sell&&!memo){delete D[k]}
+  else{D[k]={buy:buy||0,sell:sell||0,memo:memo||''}}
+  save(D)
+}
+function sy(v){const a=Math.abs(v);const s=a>=100000000?(a/100000000).toFixed(1)+'億':a>=10000?(a/10000).toFixed(1)+'万':a.toLocaleString('ja-JP');return(v>0?'+':v<0?'-':'')+s}
+function cc(v){return v>0?'pos':v<0?'neg':'zero'}
+function pad(n){return String(n).padStart(2,'0')}
+
+function renderSummary(){
+  const dim=new Date(cy,cm+1,0).getDate();
+  let mBuy=0,mSell=0;
+  for(let d=1;d<=dim;d++){const k=dk(cy,cm,d);if(D[k]){mBuy+=D[k].buy;mSell+=D[k].sell;}}
+  const mNet=mBuy+mSell;
+  let tBuy=0,tSell=0,tDays=0;
+  Object.values(D).forEach(v=>{tBuy+=v.buy;tSell+=v.sell;tDays++;});
+  const tNet=tBuy+tSell;
+  document.getElementById('sumSection').innerHTML=`
+    <div class="month-block">
+      <div class="block-head">
+        <span class="block-label">📅 今月累計（${cy}年${MONTHS[cm]}）</span>
+        <span class="block-net ${cc(mNet)}">${mNet>=0?'+':''}¥${Math.abs(mNet).toLocaleString('ja-JP')}</span>
+      </div>
+      <div class="month-row">
+        <div class="mcard"><div class="mc-label">📈 信用買い</div><div class="mc-val ${cc(mBuy)}">${sy(mBuy)}</div></div>
+        <div class="mcard"><div class="mc-label">📉 信用売り</div><div class="mc-val ${cc(mSell)}">${sy(mSell)}</div></div>
+      </div>
+    </div>
+    <div class="total-bar">
+      <div>
+        <div class="total-bar-label">📊 総累計（全期間）</div>
+        <div class="total-bar-sub">${tDays}日分のデータ</div>
+      </div>
+      <div class="total-bar-val ${cc(tNet)}">${tNet>=0?'+':''}¥${Math.abs(tNet).toLocaleString('ja-JP')}</div>
+    </div>`;
+}
+
+const HOLIDAYS={
+  '2025-01-01':'元日','2025-01-13':'成人の日','2025-02-11':'建国記念の日','2025-02-23':'天皇誕生日',
+  '2025-02-24':'振替休日','2025-03-20':'春分の日','2025-04-29':'昭和の日','2025-05-03':'憲法記念日',
+  '2025-05-04':'みどりの日','2025-05-05':'こどもの日','2025-05-06':'振替休日','2025-07-21':'海の日',
+  '2025-08-11':'山の日','2025-09-15':'敬老の日','2025-09-23':'秋分の日','2025-10-13':'スポーツの日',
+  '2025-11-03':'文化の日','2025-11-23':'勤労感謝の日','2025-11-24':'振替休日',
+  '2026-01-01':'元日','2026-01-12':'成人の日','2026-02-11':'建国記念の日','2026-02-23':'天皇誕生日',
+  '2026-03-20':'春分の日','2026-04-29':'昭和の日','2026-05-03':'憲法記念日','2026-05-04':'みどりの日',
+  '2026-05-05':'こどもの日','2026-05-06':'振替休日','2026-07-20':'海の日','2026-08-11':'山の日',
+  '2026-09-21':'敬老の日','2026-09-22':'国民の休日','2026-09-23':'秋分の日','2026-10-12':'スポーツの日',
+  '2026-11-03':'文化の日','2026-11-23':'勤労感謝の日',
+};
+
+function renderCal(){
+  D=load();
+  document.getElementById('hdrTitle').textContent=`${cy}年${MONTHS[cm]}`;
+  renderSummary();
+  const dim=new Date(cy,cm+1,0).getDate(),fd=new Date(cy,cm,1).getDay();
+  let html='';
+  for(let i=0;i<fd;i++)html+='<div class="cell empty"></div>';
+  for(let d=1;d<=dim;d++){
+    const k=dk(cy,cm,d),e=D[k],dow=new Date(cy,cm,d).getDay();
+    const isTd=(cy===today.getFullYear()&&cm===today.getMonth()&&d===today.getDate());
+    const isHol=!!HOLIDAYS[k],isRed=dow===0||isHol;
+    let cls='cell'+(isRed?' sun':dow===6?' sat':'')+(isTd?' today':'')+(k===selKey?' selected':'');
+    let bh='',sh='',nh='',hh='';
+    if(isHol)hh=`<div class="chdl">${HOLIDAYS[k]}</div>`;
+    if(e){
+      if(e.buy)bh=`<div class="cbuy ${e.buy>0?'p':'n'}">${sy(e.buy)}</div>`;
+      if(e.sell)sh=`<div class="csell ${e.sell>0?'p':'n'}">${sy(e.sell)}</div>`;
+      const n=e.buy+e.sell;
+      nh=`<div class="cnet ${n>0?'p':n<0?'n':'z'}">${sy(n)}</div>`;
+    }
+    html+=`<div class="${cls}" onclick="selDay('${k}')"><div class="cn">${d}<span class="tdot"></span></div>${hh}${bh}${sh}${nh}</div>`;
+  }
+  document.getElementById('calgrid').innerHTML=html;
+  if(selKey)renderDetail(selKey);
+}
+
+function selDay(k){selKey=k;renderCal();renderDetail(k);const p=document.getElementById('dpanel');p.classList.add('show');setTimeout(()=>p.scrollIntoView({behavior:'smooth',block:'nearest'}),50)}
+
+function renderDetail(k){
+  const e=getE(k),[y,m,d]=k.split('-').map(Number),dow=new Date(y,m-1,d).getDay();
+  document.getElementById('ddate').textContent=`${y}年${m}月${d}日（${DAYS[dow]}）`;
+  document.getElementById('dinBuy').value=e.buy||'';
+  document.getElementById('dinSell').value=e.sell||'';
+  document.getElementById('dinMemo').value=e.memo||'';
+  document.getElementById('buyCalcResult').textContent='';
+  document.getElementById('sellCalcResult').textContent='';
+  document.getElementById('autoSaveIndicator').textContent='入力後に自動保存されます';
+  document.getElementById('autoSaveIndicator').className='autosave-indicator';
+  updNet();
+}
+
+function updNet(){
+  const bs=document.getElementById('dinBuy').value,ss=document.getElementById('dinSell').value;
+  const bv=calc(bs),sv=calc(ss);
+  const be=document.getElementById('buyCalcResult');
+  if(bs&&bs!==String(bv)&&bv!==null){be.textContent='= ¥'+bv.toLocaleString('ja-JP');}else{be.textContent='';}
+  const se=document.getElementById('sellCalcResult');
+  if(ss&&ss!==String(sv)&&sv!==null){se.textContent='= ¥'+sv.toLocaleString('ja-JP');}else{se.textContent='';}
+  const n=(bv||0)+(sv||0);
+  const el=document.getElementById('dnetval');
+  el.textContent=(n>=0?'+':'')+Math.abs(n).toLocaleString('ja-JP');
+  el.className='dnetv '+(n>0?'pos':n<0?'neg':'neu');
+}
+
+function autoSave(){
+  if(!selKey)return;
+  clearTimeout(autoSaveTimer);
+  document.getElementById('autoSaveIndicator').textContent='保存中...';
+  document.getElementById('autoSaveIndicator').className='autosave-indicator';
+  autoSaveTimer=setTimeout(()=>{
+    setE(selKey,document.getElementById('dinBuy').value,document.getElementById('dinSell').value,document.getElementById('dinMemo').value);
+    renderCal();
+    document.getElementById('autoSaveIndicator').textContent='✓ 保存しました';
+    document.getElementById('autoSaveIndicator').className='autosave-indicator saved';
+  },800);
+}
+
+document.getElementById('dinBuy').addEventListener('input',()=>{updNet();autoSave();});
+document.getElementById('dinSell').addEventListener('input',()=>{updNet();autoSave();});
+document.getElementById('dinMemo').addEventListener('input',autoSave);
+document.getElementById('dclose').addEventListener('click',()=>{selKey=null;document.getElementById('dpanel').classList.remove('show');renderCal()});
+
+// スワイプ
+let swipeStartX=0,swipeStartY=0;
+const calwrap=document.getElementById('calwrap');
+calwrap.addEventListener('touchstart',e=>{swipeStartX=e.touches[0].clientX;swipeStartY=e.touches[0].clientY;},{passive:true});
+calwrap.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-swipeStartX;
+  const dy=e.changedTouches[0].clientY-swipeStartY;
+  if(Math.abs(dx)>40&&Math.abs(dx)>Math.abs(dy)*1.5){
+    if(dx<0){cm++;if(cm>11){cm=0;cy++;}}
+    else{cm--;if(cm<0){cm=11;cy--;}}
+    selKey=null;document.getElementById('dpanel').classList.remove('show');
+    renderCal();
+  }
+},{passive:true});
+
+function renderList(){
+  D=load();const entries=Object.entries(D).sort((a,b)=>b[0].localeCompare(a[0]));
+  if(!entries.length){document.getElementById('listwrap').innerHTML='<div class="empty"><div class="empty-icon">📭</div>まだデータがありません</div>';return}
+  const groups={};entries.forEach(([k,v])=>{const ym=k.slice(0,7);if(!groups[ym])groups[ym]=[];groups[ym].push([k,v])});
+  let html='';
+  Object.entries(groups).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([ym,items])=>{
+    const[y,m]=ym.split('-').map(Number);let mb=0,ms=0;items.forEach(([,v])=>{mb+=v.buy;ms+=v.sell});const mn=mb+ms;
+    html+=`<div class="lmhead">${y}年${MONTHS[m-1]}　月計: <span class="${cc(mn)}">${mn>=0?'+':''}¥${Math.abs(mn).toLocaleString('ja-JP')}</span></div>`;
+    items.forEach(([k,v])=>{
+      const[,,d]=k.split('-').map(Number),dow=new Date(k).getDay(),n=v.buy+v.sell;
+      const bc=v.buy>0?'chip-p':'chip-n',sc=v.sell>0?'chip-p':'chip-n';
+      const chips=(v.buy?`<span class="chip ${bc}">買 ${v.buy>=0?'+':''}¥${Math.abs(v.buy).toLocaleString()}</span>`:'')+(v.sell?`<span class="chip ${sc}">売 ${v.sell>=0?'+':''}¥${Math.abs(v.sell).toLocaleString()}</span>`:'');
+      html+=`<div class="litem" onclick="goDate('${k}')"><div class="lbadge"><div class="ldnum" style="color:${dow===0?'var(--sell)':dow===6?'var(--acc)':'var(--t)'}">${d}</div><div class="ldow">${DAYS[dow]}</div></div><div class="ldata"><div class="lchips">${chips}</div>${v.memo?`<div class="lmemo">${v.memo}</div>`:''}</div><div class="lnet ${cc(n)}">${n>=0?'+':''}¥${Math.abs(n).toLocaleString('ja-JP')}</div></div>`;
+    });
+  });
+  document.getElementById('listwrap').innerHTML=html;
+}
+function goDate(k){const[y,m]=k.split('-').map(Number);cy=y;cm=m-1;selKey=k;switchTab('cal');setTimeout(()=>{renderCal();document.getElementById('dpanel').classList.add('show')},60)}
+
+function renderStats(){
+  D=load();const entries=Object.entries(D);
+  if(!entries.length){document.getElementById('statswrap').innerHTML='<div class="empty"><div class="empty-icon">📊</div>データがまだありません</div>';return}
+  let tB=0,tS=0,maxP=-Infinity,maxL=Infinity,mpk='',mlk='',pos=0,neg=0;const mmap={};
+  entries.forEach(([k,v])=>{tB+=v.buy;tS+=v.sell;const n=v.buy+v.sell;if(n>maxP){maxP=n;mpk=k}if(n<maxL){maxL=n;mlk=k}if(n>0)pos++;else if(n<0)neg++;const ym=k.slice(0,7);if(!mmap[ym])mmap[ym]={buy:0,sell:0};mmap[ym].buy+=v.buy;mmap[ym].sell+=v.sell});
+  const tN=tB+tS,total=entries.length;
+  const fk=k=>{if(!k)return'-';const[,m,d]=k.split('-').map(Number);return`${m}/${d}`};
+  const trendHtml=Object.entries(mmap).sort((a,b)=>b[0].localeCompare(a[0])).slice(0,6).map(([ym,v])=>{const[y,m]=ym.split('-').map(Number),n=v.buy+v.sell;return`<li class="titem"><span class="tdate">${y}年${MONTHS[m-1]}</span><span class="tval ${cc(n)}">${n>=0?'+':''}¥${Math.abs(n).toLocaleString('ja-JP')}</span></li>`}).join('');
+  document.getElementById('statswrap').innerHTML=`
+    <div class="stitle">▍ 全期間サマリー</div>
+    <div class="sgrid">
+      <div class="scard wide"><div class="slabel">累計 損益合計</div><div class="sval ${cc(tN)}">${tN>=0?'+':''}¥${Math.abs(tN).toLocaleString('ja-JP')}</div><div class="ssub">全 ${total} 日分</div></div>
+      <div class="scard"><div class="slabel">信用買い累計</div><div class="sval ${cc(tB)}">${tB>=0?'+':''}¥${Math.abs(tB).toLocaleString('ja-JP')}</div></div>
+      <div class="scard"><div class="slabel">信用売り累計</div><div class="sval ${cc(tS)}">${tS>=0?'+':''}¥${Math.abs(tS).toLocaleString('ja-JP')}</div></div>
+      <div class="scard"><div class="slabel">最高益日</div><div class="sval pos">${mpk?'+¥'+maxP.toLocaleString():'-'}</div><div class="ssub">${fk(mpk)}</div></div>
+      <div class="scard"><div class="slabel">最大損失日</div><div class="sval neg">${mlk?'-¥'+Math.abs(maxL).toLocaleString():'-'}</div><div class="ssub">${fk(mlk)}</div></div>
+      <div class="scard"><div class="slabel">プラス日数</div><div class="sval pos">${pos}日</div></div>
+      <div class="scard"><div class="slabel">マイナス日数</div><div class="sval neg">${neg}日</div></div>
+    </div>
+    <div class="stitle">▍ 月別推移（直近6ヶ月）</div>
+    <div class="scard"><ul class="tlist">${trendHtml}</ul></div>`;
+}
+
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.getElementById('calView').style.display=name==='cal'?'':'none';
+  document.getElementById('listView').style.display=name==='list'?'':'none';
+  document.getElementById('statsView').style.display=name==='stats'?'':'none';
+  if(name==='cal')renderCal();if(name==='list')renderList();if(name==='stats')renderStats();
+}
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>switchTab(t.dataset.tab)));
+document.getElementById('prevBtn').addEventListener('click',()=>{cm--;if(cm<0){cm=11;cy--}selKey=null;document.getElementById('dpanel').classList.remove('show');renderCal()});
+document.getElementById('nextBtn').addEventListener('click',()=>{cm++;if(cm>11){cm=0;cy++}selKey=null;document.getElementById('dpanel').classList.remove('show');renderCal()});
+document.getElementById('todayBtn').addEventListener('click',()=>{cy=today.getFullYear();cm=today.getMonth();selKey=null;document.getElementById('dpanel').classList.remove('show');renderCal()});
+const overlay=document.getElementById('overlay');
+document.getElementById('fab').addEventListener('click',()=>{
+  const now=new Date();
+  document.getElementById('mdate').value=`${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  document.getElementById('mbuy').value='';document.getElementById('msell').value='';document.getElementById('mmemo').value='';
+  overlay.classList.add('show');
+});
+function closeModal(){overlay.classList.remove('show')}
+document.getElementById('mclose').addEventListener('click',closeModal);
+document.getElementById('mcancel').addEventListener('click',closeModal);
+overlay.addEventListener('click',e=>{if(e.target===overlay)closeModal()});
+document.getElementById('msave').addEventListener('click',()=>{
+  const k=document.getElementById('mdate').value;if(!k){alert('日付を選んでください');return}
+  setE(k,document.getElementById('mbuy').value,document.getElementById('msell').value,document.getElementById('mmemo').value);
+  const[y,m]=k.split('-').map(Number);cy=y;cm=m-1;selKey=k;closeModal();switchTab('cal');
+  setTimeout(()=>{renderCal();document.getElementById('dpanel').classList.add('show')},60);toast('保存しました ✓');
+});
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',1800)}
+renderCal();
+</script>
+</body>
+</html>
